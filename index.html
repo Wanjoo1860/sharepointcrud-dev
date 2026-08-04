@@ -112,9 +112,14 @@ var msalReady = false;
 
 // ---- 앱 초기화 ----
 (async function() {
-    // 1. Teams 환경 감지
+    // 1. Teams 환경 감지 (2초 타임아웃 적용)
     try {
-        await microsoftTeams.app.initialize();
+        await Promise.race([
+            microsoftTeams.app.initialize(),
+            new Promise(function(_, reject) {
+                setTimeout(function() { reject(new Error('Not in Teams')); }, 2000);
+            })
+        ]);
         isInTeams = true;
         document.getElementById('envBadge').innerText = 'Teams';
         document.getElementById('envBadge').className = 'env-badge env-teams';
