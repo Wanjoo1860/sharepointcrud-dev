@@ -65,50 +65,73 @@ async function addAdmin() {
     }
 
     try {
-        // 1. 이메일로 사용자 조회
-        var userResponse = await graphGet(CONFIG.graphUrl + '/users/' + email);
+        // 1. 이메일로 사용자 조회 (특수문자 인코딩)
+        var userResponse = await graphGet(CONFIG.graphUrl + '/users/' + encodeURIComponent(email));
         var userId = userResponse.id;
+
+        if (!userId) {
+            showStatus('사용자를 찾을 수 없습니다: ' + email, 'error');
+            return;
+        }
+
         var odataRef = { '@odata.id': CONFIG.graphUrl + '/directoryObjects/' + userId };
+        var ownerResult = 'success';
+        var memberResult = 'success';
 
-        // 2. 소유자로 추가 (소유자여야 멤버 관리 가능)
-        var ownerResponse = await graphPost(
-            CONFIG.graphUrl + '/groups/' + CONFIG.adminGroupId + '/owners/$ref',
-            odataRef
-        );
-
-        // 3. 구성원으로도 추가
-        var memberResponse = await graphPost(
-            CONFIG.graphUrl + '/groups/' + CONFIG.adminGroupId + '/members/$ref',
-            odataRef
-        );
-
-        // 결과 확인 (400 = 이미 등록됨, 204 = 성공)
-        var ownerOk = (ownerResponse.status === 204 || ownerResponse.status === 400);
-        var memberOk = (memberResponse.status === 204 || memberResponse.status === 400);
-
-        if (ownerOk && memberOk) {
-            if (ownerResponse.status === 400 && memberResponse.status === 400) {
-                showStatus('이미 관리자로 등록된 사용자입니다.', 'error');
+        // 2. 구성원으로 추가
+        try {
+            await graphPost(
+                CONFIG.graphUrl + '/groups/' + CONFIG.adminGroupId + '/members/$ref',
+                odataRef
+            );
+        } catch (memberErr) {
+            if (memberErr.message && memberErr.message.indexOf('already exist') > -1) {
+                memberResult = 'exists';
+            } else if (memberErr.message && memberErr.message.indexOf('400') > -1) {
+                memberResult = 'exists';
             } else {
-                showStatus(email + ' 관리자로 추가 완료', 'success');
-                document.getElementById('inputAdminEmail').value = '';
-                loadAdminMembers();
+                memberResult = 'fail';
+                console.error('[관리자 추가] 구성원 추가 실패:', memberErr.message);
             }
+        }
+
+        // 3. 소유자로도 추가 (소유자여야 다른 멤버 관리 가능)
+        try {
+            await graphPost(
+                CONFIG.graphUrl + '/groups/' + CONFIG.adminGroupId + '/owners/$ref',
+                odataRef
+            );
+        } catch (ownerErr) {
+            if (ownerErr.message && ownerErr.message.indexOf('already exist') > -1) {
+                ownerResult = 'exists';
+            } else if (ownerErr.message && ownerErr.message.indexOf('400') > -1) {
+                ownerResult = 'exists';
+            } else {
+                ownerResult = 'fail';
+                console.error('[관리자 추가] 소유자 추가 실패:', ownerErr.message);
+            }
+        }
+
+        // 4. 결과 처리
+        if (memberResult === 'exists' && ownerResult === 'exists') {
+            showStatus('이미 관리자로 등록된 사용자입니다.', 'error');
+        } else if (memberResult === 'fail' && ownerResult === 'fail') {
+            showStatus('관리자 추가 실패: 권한이 부족합니다. 그룹이 역할 할당 가능 그룹인 경우 일반 보안 그룹으로 변경이 필요합니다.', 'error');
         } else {
-            var errText = '';
-            if (!ownerOk) errText = await ownerResponse.text();
-            else if (!memberOk) errText = await memberResponse.text();
-            showStatus('추가 실패: ' + errText, 'error');
+            showStatus(email + ' 관리자로 추가 완료!', 'success');
+            document.getElementById('inputAdminEmail').value = '';
+            loadAdminMembers();
         }
     } catch (e) {
-        if (e.message.indexOf('404') > -1) {
+        if (e.message && e.message.indexOf('404') > -1) {
             showStatus('사용자를 찾을 수 없습니다: ' + email, 'error');
+        } else if (e.message && e.message.indexOf('403') > -1) {
+            showStatus('권한 부족: ' + email + ' 조회 권한이 없습니다.', 'error');
         } else {
             showStatus('관리자 추가 실패: ' + e.message, 'error');
         }
     }
 }
-
 
 /**
  * 관리자 그룹에서 구성원 제거
@@ -123,28 +146,44 @@ async function removeAdmin(userId, displayName) {
         return;
     }
 
+    var memberRemoved = false;
+    var ownerRemoved = false;
+
     try {
-        // 소유자에서 제거
-        var ownerResponse = await graphDelete(
-            CONFIG.graphUrl + '/groups/' + CONFIG.adminGroupId + '/owners/' + userId + '/$ref'
-        );
+        // 1. 구성원에서 제거
+        try {
+            await graphDelete(
+                CONFIG.graphUrl + '/groups/' + CONFIG.adminGroupId + '/members/' + userId + '/$ref'
+            );
+            memberRemoved = true;
+        } catch (memberErr) {
+            if (memberErr.message && memberErr.message.indexOf('404') > -1) {
+                memberRemoved = true; // 이미 없음
+            } else {
+                console.error('[관리자 제거] 구성원 제거 실패:', memberErr.message);
+            }
+        }
 
-        // 구성원에서 제거
-        var memberResponse = await graphDelete(
-            CONFIG.graphUrl + '/groups/' + CONFIG.adminGroupId + '/members/' + userId + '/$ref'
-        );
+        // 2. 소유자에서 제거
+        try {
+            await graphDelete(
+                CONFIG.graphUrl + '/groups/' + CONFIG.adminGroupId + '/owners/' + userId + '/$ref'
+            );
+            ownerRemoved = true;
+        } catch (ownerErr) {
+            if (ownerErr.message && ownerErr.message.indexOf('404') > -1) {
+                ownerRemoved = true; // 이미 없음
+            } else {
+                console.error('[관리자 제거] 소유자 제거 실패:', ownerErr.message);
+            }
+        }
 
-        var ownerOk = (ownerResponse.status === 204 || ownerResponse.status === 404);
-        var memberOk = (memberResponse.status === 204 || memberResponse.status === 404);
-
-        if (ownerOk && memberOk) {
+        // 3. 결과
+        if (memberRemoved || ownerRemoved) {
             showStatus(displayName + ' 관리자에서 제거 완료', 'success');
             loadAdminMembers();
         } else {
-            var errText = '';
-            if (!ownerOk) errText = await ownerResponse.text();
-            else if (!memberOk) errText = await memberResponse.text();
-            showStatus('제거 실패: ' + errText, 'error');
+            showStatus('제거 실패: 권한이 부족합니다.', 'error');
         }
     } catch (e) {
         showStatus('관리자 제거 실패: ' + e.message, 'error');
