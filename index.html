@@ -112,12 +112,12 @@ var msalReady = false;
 
 // ---- 앱 초기화 ----
 (async function() {
-    // 1. Teams 환경 감지 (1초 타임아웃 적용)
+    // 1. Teams 환경 감지 (0.5초 타임아웃 적용)
     try {
         await Promise.race([
             microsoftTeams.app.initialize(),
             new Promise(function(_, reject) {
-                setTimeout(function() { reject(new Error('Not in Teams')); }, 1000);
+                setTimeout(function() { reject(new Error('Not in Teams')); }, 500);
             })
         ]);
         isInTeams = true;
