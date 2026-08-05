@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>SharePoint List CRUD (무료)</title>
+    <title>SharePoint List CRUD</title>
     <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -38,6 +38,28 @@
 
 <div class="status" id="status"></div>
 
+<!-- 관리자 패널 -->
+<div class="form-area admin-panel" id="adminPanel" style="display:none;">
+    <h3 style="color:#E74C3C;">관리자 관리</h3>
+    <div class="form-row" style="margin-bottom:15px;">
+        <input type="text" id="inputAdminEmail" placeholder="추가할 사용자 이메일">
+        <button class="btn btn-danger" onclick="addAdmin()">관리자 추가</button>
+        <button class="btn btn-secondary" onclick="loadAdminMembers()">새로고침</button>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>이름</th>
+                <th>이메일</th>
+                <th style="width:100px;">작업</th>
+            </tr>
+        </thead>
+        <tbody id="adminTableBody">
+            <tr><td colspan="3" style="text-align:center;padding:20px;color:#999;">로딩 중...</td></tr>
+        </tbody>
+    </table>
+</div>
+
 <!-- 데이터 테이블 -->
 <table>
     <thead>
@@ -54,12 +76,17 @@
     </tbody>
 </table>
 
-<!-- Teams JS SDK -->
+<!-- 외부 라이브러리 -->
 <script src="https://res.cdn.office.net/teams-js/2.31.1/js/MicrosoftTeams.min.js"></script>
-<!-- MSAL.js v4 -->
 <script src="https://unpkg.com/@azure/msal-browser@4.25.0/lib/msal-browser.min.js"></script>
-<!-- 앱 스크립트 -->
-<script src="js/app.js"></script>
+
+<!-- 앱 스크립트 (로드 순서 중요) -->
+<script src="js/config.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/crud.js"></script>
+<script src="js/ui.js"></script>
 
 </body>
 </html>

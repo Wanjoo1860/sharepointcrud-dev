@@ -1,14 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- 배경 원 -->
   <circle cx="32" cy="32" r="30" fill="#4472C4"/>
-  <!-- SharePoint 느낌의 리스트 아이콘 -->
   <rect x="16" y="16" width="32" height="32" rx="4" ry="4" fill="#ffffff" opacity="0.95"/>
-  <!-- 리스트 행 라인 -->
   <rect x="21" y="22" width="22" height="3" rx="1.5" fill="#4472C4"/>
   <rect x="21" y="29" width="22" height="3" rx="1.5" fill="#4472C4" opacity="0.7"/>
   <rect x="21" y="36" width="22" height="3" rx="1.5" fill="#4472C4" opacity="0.5"/>
   <rect x="21" y="43" width="14" height="3" rx="1.5" fill="#4472C4" opacity="0.3"/>
-  <!-- CRUD 연필 아이콘 (우하단) -->
   <g transform="translate(40, 38) rotate(-45)">
     <rect x="0" y="0" width="4" height="16" rx="1" fill="#ED7D31"/>
     <polygon points="0,16 2,20 4,16" fill="#ED7D31"/>

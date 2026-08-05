@@ -171,3 +171,30 @@ tr:hover td {
     background: #6c757d;
     color: #fff;
 }
+
+.admin-panel {
+    border-left: 4px solid #E74C3C;
+}
+
+.admin-panel h3 {
+    color: #E74C3C;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-left: 8px;
+}
+
+.role-admin {
+    background: #E74C3C;
+    color: #fff;
+}
+
+.role-user {
+    background: #6c757d;
+    color: #fff;
+}
