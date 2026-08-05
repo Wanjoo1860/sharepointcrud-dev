@@ -9,6 +9,14 @@ var LIST_NAME = 'TestData';
 var SCOPES = ['User.Read', 'Sites.ReadWrite.All'];
 // ============================================================
 
+// ============================================================
+// ★★★ 권한 관리 설정 ★★★
+// ============================================================
+var ADMIN_GROUP_ID = 'bc9227b3-a99a-459e-bfc7-71c7166f19c4'; // Dev 그룹
+var currentUserRole = 'user'; // 'admin' 또는 'user'
+var currentUserEmail = '';
+
+
 var GRAPH_URL = 'https://graph.microsoft.com/v1.0';
 var DATA = [];
 var siteId = null;
@@ -243,12 +251,39 @@ function onLoginSuccess() {
     document.getElementById('btnLogin').style.display = 'none';
     document.getElementById('btnLogout').style.display = '';
     var account = msalInstance.getActiveAccount();
-    document.getElementById('loginStatus').innerText = '✓ ' + (account ? account.username : '로그인됨');
+    currentUserEmail = account ? account.username : '';
+    document.getElementById('loginStatus').innerText = '✓ ' + currentUserEmail;
     document.getElementById('btnRefresh').disabled = false;
     document.getElementById('btnSave').disabled = false;
-    showStatus('로그인 성공: ' + (account ? account.username : ''), 'success');
+    showStatus('로그인 성공: ' + currentUserEmail, 'success');
+    checkUserRole();
     getSiteAndList();
 }
+
+// ---- 사용자 역할 확인 (Dev 그룹 멤버 여부) ----
+async function checkUserRole() {
+    try {
+        await getToken();
+        var response = await fetch(
+            GRAPH_URL + '/me/memberOf?$filter=id eq \'' + ADMIN_GROUP_ID + '\'',
+            {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            }
+        );
+        var data = await response.json();
+        if (data.value && data.value.length > 0) {
+            currentUserRole = 'admin';
+            console.log('[권한] 관리자 역할 확인됨');
+        } else {
+            currentUserRole = 'user';
+            console.log('[권한] 일반 사용자 역할');
+        }
+    } catch (e) {
+        console.warn('[권한] 그룹 멤버십 확인 실패, 기본값(user) 적용:', e.message);
+        currentUserRole = 'user';
+    }
+}
+
 
 // ---- Graph API 호출 헬퍼 ----
 async function graphCall(url, method, body) {
@@ -291,7 +326,7 @@ async function getItems() {
     try {
         showStatus('데이터 불러오는 중...', 'info');
         var result = await graphCall(
-            GRAPH_URL + '/sites/' + siteId + '/lists/' + listId + '/items?$expand=fields&$top=500'
+            GRAPH_URL + '/sites/' + siteId + '/lists/' + listId + '/items?$expand=fields,createdByUser&$top=500'
         );
         DATA = result.value;
         renderTable();
@@ -386,9 +421,24 @@ function renderTable() {
         html += '<td>' + (f['_xbd80__xc11c_'] || '') + '</td>';
         html += '<td>' + (f['_xc9c1__xae09_'] || '') + '</td>';
         html += '<td>';
-        html += '<button class="btn btn-warning" onclick="editItem(\'' + id + '\')">수정</button> ';
-        html += '<button class="btn btn-danger" onclick="deleteItem(\'' + id + '\')">삭제</button>';
+        var createdBy = '';
+        if (item.createdBy && item.createdBy.user && item.createdBy.user.email) {
+            createdBy = item.createdBy.user.email.toLowerCase();
+        } else if (f.Author && f.Author.Email) {
+            createdBy = f.Author.Email.toLowerCase();
+        }
+
+        var isOwner = (currentUserEmail.toLowerCase() === createdBy);
+        var canEdit = (currentUserRole === 'admin') || isOwner;
+
+        if (canEdit) {
+            html += '<button class="btn btn-warning" onclick="editItem(\'' + id + '\')">수정</button> ';
+            html += '<button class="btn btn-danger" onclick="deleteItem(\'' + id + '\')">삭제</button>';
+        } else {
+            html += '<span style="color:#999;font-size:12px;">읽기 전용</span>';
+        }
         html += '</td>';
+
         html += '</tr>';
     });
     tbody.innerHTML = html;
