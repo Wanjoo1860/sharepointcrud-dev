@@ -8,7 +8,7 @@ var CONFIG = {
     sitePath: '/sites/Dev896',
     listName: 'TestData',
     adminGroupId: 'bc9227b3-a99a-459e-bfc7-71c7166f19c4',
-    scopes: ['User.Read', 'Sites.ReadWrite.All', 'GroupMember.ReadWrite.All'],
+    scopes: ['User.Read', 'Sites.ReadWrite.All', 'GroupMember.ReadWrite.All', 'Group.ReadWrite.All'],
     graphUrl: 'https://graph.microsoft.com/v1.0'
 };
 
